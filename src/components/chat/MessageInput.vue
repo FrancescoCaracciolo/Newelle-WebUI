@@ -1,5 +1,7 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onBeforeUnmount } from 'vue'
+import { recognizeSpeech } from '../../api/stt'
+import VoiceRecorder from '../../utils/voiceRecorder'
 
 const emit = defineEmits(['send', 'stop', 'regenerate'])
 const props = defineProps({
@@ -9,6 +11,9 @@ const props = defineProps({
 
 const text = ref('')
 const textarea = ref(null)
+const recordingState = ref('idle')
+
+let recorder = null
 
 function handleSend() {
   const msg = text.value.trim()
@@ -31,6 +36,59 @@ function autoResize() {
     textarea.value.style.height = Math.min(textarea.value.scrollHeight, 200) + 'px'
   }
 }
+
+async function toggleRecording() {
+  if (recordingState.value === 'idle') {
+    await startRecording()
+  } else if (recordingState.value === 'recording') {
+    await stopRecording()
+  }
+}
+
+async function startRecording() {
+  if (!recorder) {
+    recorder = new VoiceRecorder()
+    recorder.onTranscript = (transcript) => {
+      if (transcript) {
+        text.value = text.value ? text.value + ' ' + transcript : transcript
+        nextTick(() => {
+          autoResize()
+          handleSend()
+        })
+      }
+    }
+    recorder.onError = (error) => {
+      console.error('Voice recording error:', error)
+    }
+    recorder.onStateChange = (state) => {
+      recordingState.value = state
+    }
+  }
+
+  try {
+    await recorder.start(recognizeSpeech)
+  } catch (err) {
+    console.error('Failed to start recording:', err)
+  }
+}
+
+async function stopRecording() {
+  if (recorder) {
+    await recorder.stop()
+  }
+}
+
+function cancelRecording() {
+  if (recorder) {
+    recorder.cancel()
+  }
+}
+
+onBeforeUnmount(() => {
+  if (recorder) {
+    recorder.cancel()
+  }
+})
 </script>
 
 <template>
@@ -46,6 +104,23 @@ function autoResize() {
         rows="1"
       ></textarea>
       <div class="input-actions">
+        <button
+          class="action-btn mic-btn"
+          :class="{ 'recording': recordingState === 'recording', 'processing': recordingState === 'processing' }"
+          @click="toggleRecording"
+          :disabled="recordingState === 'processing' || (disabled && !streaming)"
+          :title="recordingState === 'recording' ? 'Stop recording' : 'Start voice input'"
+        >
+          <svg v-if="recordingState !== 'recording'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2"/>
+          </svg>
+        </button>
         <button
           v-if="streaming"
           class="action-btn stop-btn"
@@ -152,6 +227,24 @@ textarea::placeholder {
 .action-btn:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.mic-btn.recording {
+  color: var(--red);
+  animation: pulse-mic 1.5s ease-in-out infinite;
+}
+
+.mic-btn.processing {
+  color: var(--accent);
+}
+
+@keyframes pulse-mic {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .stop-btn {

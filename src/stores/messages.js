@@ -29,6 +29,9 @@ export const useMessagesStore = defineStore('messages', {
     async send(text) {
       const chats = useChatsStore()
       if (!chats.currentChatId) {
+        await chats.createChat()
+      }
+      if (!chats.currentChatId) {
         console.warn('send: no currentChatId')
         return
       }
