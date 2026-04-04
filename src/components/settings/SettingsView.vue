@@ -7,6 +7,7 @@ import InterfacesPanel from './InterfacesPanel.vue'
 import ProfilesPanel from './ProfilesPanel.vue'
 import ScheduledTasksPanel from './ScheduledTasksPanel.vue'
 import LLMPanel from './LLMPanel.vue'
+import TtsPanel from './TtsPanel.vue'
 
 const props = defineProps({
   initialTab: { type: String, default: 'tools' },
@@ -18,6 +19,7 @@ const tabs = [
   { key: 'llm', label: 'LLM' },
   { key: 'tools', label: 'Tools' },
   { key: 'prompts', label: 'Prompts' },
+  { key: 'tts', label: 'TTS' },
   { key: 'interfaces', label: 'Interfaces' },
   { key: 'profiles', label: 'Profiles' },
   { key: 'tasks', label: 'Scheduled Tasks' },
@@ -53,6 +55,7 @@ const settings = useSettingsStore()
         <LLMPanel v-if="activeTab === 'llm'" />
         <ToolsPanel v-if="activeTab === 'tools'" />
         <PromptsPanel v-if="activeTab === 'prompts'" />
+        <TtsPanel v-if="activeTab === 'tts'" />
         <InterfacesPanel v-if="activeTab === 'interfaces'" />
         <ProfilesPanel v-if="activeTab === 'profiles'" />
         <ScheduledTasksPanel v-if="activeTab === 'tasks'" />

@@ -5,6 +5,7 @@ import CodeBlockOrWidget from './CodeBlockOrWidget.vue'
 import ToolCallBlock from './ToolCallBlock.vue'
 import ThinkingBlock from './ThinkingBlock.vue'
 import { parseMessageSegments } from '../../utils/messageParsing'
+import { useTtsStore } from '../../stores/tts'
 
 const props = defineProps({
   message: Object,
@@ -17,12 +18,35 @@ const consoleExpanded = ref(false)
 
 const segments = computed(() => parseMessageSegments(props.message.Message || ''))
 
+const tts = useTtsStore()
+const ttsPlaying = ref(false)
+
 function renderMarkdown(text) {
   if (!text) return ''
   try {
     return marked.parse(text, { breaks: true })
   } catch {
     return text
+  }
+}
+
+function getPlainText() {
+  return segments.value
+    .filter(seg => seg.type === 'text')
+    .map(seg => seg.content)
+    .join('\n\n')
+}
+
+async function toggleTts() {
+  if (ttsPlaying.value) {
+    await tts.stop()
+    ttsPlaying.value = false
+  } else {
+    const text = getPlainText()
+    if (!text) return
+    ttsPlaying.value = true
+    await tts.play(text)
+    ttsPlaying.value = false
   }
 }
 </script>
@@ -50,7 +74,27 @@ function renderMarkdown(text) {
       </template>
     </div>
     <div class="message-body">
-      <div class="message-role">{{ isUser ? 'You' : isConsole ? 'Console' : 'Assistant' }}</div>
+      <div class="message-header">
+        <div class="message-role">{{ isUser ? 'You' : isConsole ? 'Console' : 'Assistant' }}</div>
+        <button
+          v-if="!isUser && !isConsole && getPlainText()"
+          class="tts-btn"
+          :class="{ playing: ttsPlaying }"
+          @click="toggleTts"
+          :title="ttsPlaying ? 'Stop reading' : 'Read aloud'"
+        >
+          <svg v-if="!ttsPlaying" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
+      </div>
       <template v-if="isConsole">
         <div class="console-block" :class="{ expanded: consoleExpanded }">
           <div class="console-header" @click="consoleExpanded = !consoleExpanded">
@@ -124,7 +168,38 @@ function renderMarkdown(text) {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 4px;
+}
+
+.tts-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.tts-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.tts-btn.playing {
+  color: var(--accent);
+  animation: pulse-tts 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-tts {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .message-content {
