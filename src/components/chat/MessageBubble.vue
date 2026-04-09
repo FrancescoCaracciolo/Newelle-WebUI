@@ -6,6 +6,11 @@ import ToolCallBlock from './ToolCallBlock.vue'
 import ThinkingBlock from './ThinkingBlock.vue'
 import { parseMessageSegments } from '../../utils/messageParsing'
 import { useTtsStore } from '../../stores/tts'
+import { katexBlockExtension, katexInlineExtension } from '../../utils/katexExtension'
+
+marked.use({
+  extensions: [katexBlockExtension, katexInlineExtension],
+})
 
 const props = defineProps({
   message: Object,
