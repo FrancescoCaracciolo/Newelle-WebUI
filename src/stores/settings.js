@@ -14,6 +14,8 @@ export const useSettingsStore = defineStore('settings', {
     llmStatus: { provider: '', model: '', secondary_on: false, secondary_provider: '', secondary_model: '' },
     llmModels: [],
     llmSettings: [],
+    profiles: [],
+    currentProfile: '',
   }),
 
   actions: {
@@ -128,6 +130,50 @@ export const useSettingsStore = defineStore('settings', {
       await api.setLlmSettings(provider, settings)
       await this.fetchLlmSettings(provider)
       await this.fetchLlmStatus()
+    },
+
+    async fetchProfiles() {
+      this.profiles = await api.getProfiles()
+    },
+
+    async fetchCurrentProfile() {
+      const res = await api.getCurrentProfile()
+      this.currentProfile = res.profile
+    },
+
+    async switchProfile(name) {
+      await api.switchProfile(name)
+      this.currentProfile = name
+      await Promise.all([
+        this.fetchSettings(),
+        this.fetchLlmStatus(),
+        this.fetchProfiles(),
+        this.fetchTools(),
+      ])
+    },
+
+    async createProfile(data) {
+      await api.createProfile(data)
+      await this.fetchProfiles()
+    },
+
+    async deleteProfile(name) {
+      await api.deleteProfile(name)
+      await this.fetchProfiles()
+    },
+
+    async updateCurrentProfile() {
+      await api.updateCurrentProfile()
+      await this.fetchProfiles()
+    },
+
+    async exportProfile(name) {
+      return await api.exportProfile(name)
+    },
+
+    async importProfile(data) {
+      await api.importProfile(data)
+      await this.fetchProfiles()
     },
   },
 })

@@ -80,6 +80,14 @@ export function getInterfaceError(interfaceKey) {
   return getClient().get(`/api/interfaces/${interfaceKey}/error`).then(r => r.data)
 }
 
+export function getProfiles() {
+  return getClient().get('/api/profiles').then(r => r.data)
+}
+
+export function getCurrentProfile() {
+  return getClient().get('/api/profiles/current').then(r => r.data)
+}
+
 export function createProfile(data) {
   return getClient().post('/api/profiles', data).then(r => r.data)
 }

@@ -1,28 +1,31 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '../../stores/settings'
-import * as api from '../../api/settings'
 
 const settings = useSettingsStore()
 const profileName = ref('')
 
+onMounted(async () => {
+  await Promise.all([settings.fetchProfiles(), settings.fetchCurrentProfile()])
+})
+
 async function createProfile() {
   if (!profileName.value.trim()) return
-  await api.createProfile({ profile_name: profileName.value.trim() })
+  await settings.createProfile({ profile_name: profileName.value.trim() })
   profileName.value = ''
 }
 
 async function deleteProfile(name) {
   if (!confirm(`Delete profile "${name}"?`)) return
-  await api.deleteProfile(name)
+  await settings.deleteProfile(name)
 }
 
 async function switchProfile(name) {
-  await api.switchProfile(name)
+  await settings.switchProfile(name)
 }
 
 async function exportProfile(name) {
-  const data = await api.exportProfile(name)
+  const data = await settings.exportProfile(name)
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -44,16 +47,32 @@ async function exportProfile(name) {
     </div>
 
     <div class="item-list">
-      <div v-for="profile in settings.settings?.profiles || []" :key="profile" class="list-item">
+      <div v-for="profile in settings.profiles" :key="profile.name" class="list-item" :class="{ active: profile.current }">
         <div class="item-info">
-          <span class="item-name">{{ profile }}</span>
+          <span class="item-name">{{ profile.name }}</span>
+          <span v-if="profile.current" class="badge">Active</span>
         </div>
         <div class="item-actions">
-          <button class="action-btn" @click="switchProfile(profile)">Switch</button>
-          <button class="action-btn" @click="exportProfile(profile)">Export</button>
-          <button class="action-btn danger" @click="deleteProfile(profile)">Delete</button>
+          <button v-if="!profile.current" class="action-btn" @click="switchProfile(profile.name)">Switch</button>
+          <button class="action-btn" @click="exportProfile(profile.name)">Export</button>
+          <button class="action-btn danger" :disabled="profile.current" @click="deleteProfile(profile.name)">Delete</button>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.list-item.active {
+  background: var(--color-primary-bg, rgba(99, 102, 241, 0.08));
+  border-left: 3px solid var(--color-primary, #6366f1);
+}
+.badge {
+  font-size: 0.7rem;
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+}
+</style>
